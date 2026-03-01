@@ -340,3 +340,26 @@ A comprehensive collection of handwritten notes on backend system design concept
 [Cost Based Scaling](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing/Cost_Based_Scaling.jpeg)
 
 ---
+
+## Adding New Notes
+
+Scanned PDFs (e.g. from iPhone's **Scan Documents** feature) are processed automatically. Follow the naming convention below and simply push the PDF — a GitHub Actions workflow will convert each page to a JPEG, update this README, and remove the PDF.
+
+### Naming convention
+
+| What you upload | Where the images land |
+|---|---|
+| `{N.M}_{Topic_Name}.pdf` | `images/{N.M}_{Topic_Name}/` |
+
+**Examples:**
+
+```
+6.1_Message_Queues.pdf              →  images/6.1_Message_Queues/6.1_Message_Queues.jpeg
+6.2_Event_Driven_Architecture.pdf   →  images/6.2_Event_Driven_Architecture/6.2_Event_Driven_Architecture_page_01.jpeg
+                                       images/6.2_Event_Driven_Architecture/6.2_Event_Driven_Architecture_page_02.jpeg
+                                       …
+```
+
+**Multi-page PDFs** produce `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, … — one file per scanned page.
+
+> **Tip:** Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
