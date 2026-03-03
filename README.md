@@ -2,6 +2,7 @@
 
 A comprehensive collection of handwritten notes on backend system design concepts for AI applications.
 
+For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbolUF_78RXx68L5zGT?usp=drive_link
 ## Table of Contents
 
 ### Networking, Web & Security

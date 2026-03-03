@@ -50,8 +50,7 @@ jobs:
             # pdftoppm with -jpeg produces files named: {prefix}-{N}.jpg
             pdftoppm -jpeg -r 200 "$pdf" "${out_dir}/${pdf_name}"
 
-            # Rename .jpg → .jpeg to match the repository's existing convention,
-            # and strip the page-number suffix for single-page PDFs.
+            # Rename .jpg → .jpeg and add numeric prefix for page-order sorting.
             # nullglob ensures the array is empty when there are no matches.
             shopt -s nullglob
             page_files=("${out_dir}/${pdf_name}"-*.jpg)
@@ -61,15 +60,25 @@ jobs:
             if [ "$page_count" -eq 0 ]; then
               echo "  ERROR: pdftoppm produced no output for $pdf — skipping."
               continue
-            elif [ "$page_count" -eq 1 ]; then
-              # Single page: drop the "-1" suffix so the file is just {name}.jpeg
-              mv "${page_files[0]}" "${out_dir}/${pdf_name}.jpeg"
+            fi
+
+            # Count existing JPEG files in the folder to determine the starting index.
+            # This ensures new pages are numbered AFTER any pre-existing images.
+            shopt -s nullglob
+            existing_jpegs=("${out_dir}"/*.jpeg)
+            shopt -u nullglob
+            next_index=$(( ${#existing_jpegs[@]} + 1 ))
+
+            if [ "$page_count" -eq 1 ]; then
+              # Single page: 01_{pdf_name}.jpeg (or next available index)
+              mv "${page_files[0]}" "${out_dir}/$(printf '%02d' "$next_index")_${pdf_name}.jpeg"
             else
-              # Multi-page: rename to {name}_page_01.jpeg, _page_02.jpeg, …
-              i=1
+              # Multi-page: 01_{name}_page_01.jpeg, 02_{name}_page_02.jpeg, …
+              page_num=1
               for f in "${page_files[@]}"; do
-                mv "$f" "${out_dir}/${pdf_name}_page_$(printf '%02d' "$i").jpeg"
-                i=$((i + 1))
+                mv "$f" "${out_dir}/$(printf '%02d' "$next_index")_${pdf_name}_page_$(printf '%02d' "$page_num").jpeg"
+                next_index=$((next_index + 1))
+                page_num=$((page_num + 1))
               done
             fi
 
@@ -80,6 +89,74 @@ jobs:
           done
 
           echo "converted=true" >> "$GITHUB_OUTPUT"
+
+      - name: Re-number existing images by README order
+        if: steps.convert.outputs.converted == 'true'
+        run: |
+          python3 << 'PYEOF'
+          import os, re
+
+          README = "README.md"
+          IMAGES_DIR = "images"
+
+          with open(README, "r", encoding="utf-8") as fh:
+              content = fh.read()
+
+          # Extract ordered image references from README
+          pattern = r'images/([^/\)]+)/([^/\)]+\.jpeg)'
+          matches = re.findall(pattern, content)
+
+          folder_images = {}
+          for folder, img in matches:
+              if folder not in folder_images:
+                  folder_images[folder] = []
+              if img not in folder_images[folder]:
+                  folder_images[folder].append(img)
+
+          all_renames = []
+
+          for folder, imgs in folder_images.items():
+              folder_path = os.path.join(IMAGES_DIR, folder)
+              if not os.path.isdir(folder_path):
+                  continue
+
+              for i, img in enumerate(imgs):
+                  # Strip any existing numeric prefix (e.g. "01_") before re-numbering
+                  base_name = re.sub(r'^\d{2}_', '', img)
+                  new_name = f"{i+1:02d}_{base_name}"
+
+                  if img == new_name:
+                      continue  # Already correctly numbered
+
+                  old_abs = os.path.join(folder_path, img)
+                  new_abs = os.path.join(folder_path, new_name)
+                  old_rel = f"images/{folder}/{img}"
+                  new_rel = f"images/{folder}/{new_name}"
+
+                  if os.path.exists(old_abs):
+                      all_renames.append((old_abs, new_abs, old_rel, new_rel))
+
+          # Rename via temp files to avoid collisions
+          temp_map = []
+          for old_abs, new_abs, old_rel, new_rel in all_renames:
+              temp = old_abs + ".tmp_rename"
+              os.rename(old_abs, temp)
+              temp_map.append((temp, new_abs))
+          for temp, new_abs in temp_map:
+              os.rename(temp, new_abs)
+
+          # Update README references
+          new_content = content
+          for _, _, old_rel, new_rel in all_renames:
+              new_content = new_content.replace(old_rel, new_rel)
+
+          if new_content != content:
+              with open(README, "w", encoding="utf-8") as fh:
+                  fh.write(new_content)
+              print(f"Re-numbered {len(all_renames)} image(s) and updated README.")
+          else:
+              print("All images already correctly numbered.")
+          PYEOF
 
       - name: Update README with new images
         if: steps.convert.outputs.converted == 'true'
@@ -103,8 +180,6 @@ jobs:
                   continue
 
               # Skip folders already referenced in the README
-              # Match against the image path pattern to avoid false positives
-              # e.g. folder "Message" would wrongly match "Message_Queues" with a simple substring check
               if f"images/{folder}/" in content:
                   continue
 
@@ -134,8 +209,10 @@ jobs:
               # --- Full section body ------------------------------------
               section_body = f"\n---\n\n## {heading}\n\n"
               for jpeg in jpegs:
-                  # "Networking_and_Web_Fundamentals.jpeg" → "Networking and Web Fundamentals"
-                  topic = jpeg.replace(".jpeg", "").replace("_", " ")
+                  # Strip the numeric prefix "01_" for the display heading
+                  # "01_Networking_and_Web_Fundamentals.jpeg" → "Networking and Web Fundamentals"
+                  display = re.sub(r'^\d{2}_', '', jpeg)
+                  topic = display.replace(".jpeg", "").replace("_", " ")
                   section_body += f"### {topic}\n\n"
                   section_body += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
 
