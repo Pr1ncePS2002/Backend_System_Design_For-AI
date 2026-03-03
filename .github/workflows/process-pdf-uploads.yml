@@ -1,0 +1,180 @@
+name: Process PDF Uploads
+
+# Trigger when any PDF file is pushed to the repository
+on:
+  push:
+    paths:
+      - '**.pdf'
+
+permissions:
+  contents: write
+
+jobs:
+  process-pdfs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install PDF conversion tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+
+      - name: Convert PDFs to JPEG images
+        id: convert
+        run: |
+          # Find all PDF files (excluding .git)
+          mapfile -t pdfs < <(find . -name "*.pdf" -not -path "./.git/*" | sort)
+
+          if [ "${#pdfs[@]}" -eq 0 ]; then
+            echo "No PDF files found — nothing to do."
+            echo "converted=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Found ${#pdfs[@]} PDF file(s): ${pdfs[*]}"
+
+          for pdf in "${pdfs[@]}"; do
+            pdf_name=$(basename "$pdf" .pdf)
+            out_dir="images/${pdf_name}"
+
+            echo "Processing: $pdf  →  $out_dir/"
+            mkdir -p "$out_dir"
+
+            # Convert each PDF page to a JPEG (200 dpi for readable handwriting)
+            # pdftoppm with -jpeg produces files named: {prefix}-{N}.jpg
+            pdftoppm -jpeg -r 200 "$pdf" "${out_dir}/${pdf_name}"
+
+            # Rename .jpg → .jpeg to match the repository's existing convention,
+            # and strip the page-number suffix for single-page PDFs.
+            # nullglob ensures the array is empty when there are no matches.
+            shopt -s nullglob
+            page_files=("${out_dir}/${pdf_name}"-*.jpg)
+            shopt -u nullglob
+            page_count=${#page_files[@]}
+
+            if [ "$page_count" -eq 0 ]; then
+              echo "  ERROR: pdftoppm produced no output for $pdf — skipping."
+              continue
+            elif [ "$page_count" -eq 1 ]; then
+              # Single page: drop the "-1" suffix so the file is just {name}.jpeg
+              mv "${page_files[0]}" "${out_dir}/${pdf_name}.jpeg"
+            else
+              # Multi-page: rename to {name}_page_01.jpeg, _page_02.jpeg, …
+              i=1
+              for f in "${page_files[@]}"; do
+                mv "$f" "${out_dir}/${pdf_name}_page_$(printf '%02d' "$i").jpeg"
+                i=$((i + 1))
+              done
+            fi
+
+            echo "  Converted $page_count page(s) into $out_dir/"
+
+            # Remove the source PDF from disk (git cleanup happens in the commit step)
+            rm -f "$pdf"
+          done
+
+          echo "converted=true" >> "$GITHUB_OUTPUT"
+
+      - name: Update README with new images
+        if: steps.convert.outputs.converted == 'true'
+        run: |
+          python3 << 'PYEOF'
+          import os
+          import re
+
+          README = "README.md"
+          IMAGES_DIR = "images"
+
+          with open(README, "r", encoding="utf-8") as fh:
+              content = fh.read()
+
+          new_sections = ""
+          new_toc_entries = ""
+
+          for folder in sorted(os.listdir(IMAGES_DIR)):
+              folder_path = os.path.join(IMAGES_DIR, folder)
+              if not os.path.isdir(folder_path):
+                  continue
+
+              # Skip folders already referenced in the README
+              # Match against the image path pattern to avoid false positives
+              # e.g. folder "Message" would wrongly match "Message_Queues" with a simple substring check
+              if f"images/{folder}/" in content:
+                  continue
+
+              jpegs = sorted(f for f in os.listdir(folder_path) if f.endswith(".jpeg"))
+              if not jpegs:
+                  continue
+
+              # --- Build section heading from folder name ---------------
+              # e.g. "6.1_New_Topic_Name" → section "6.1. New Topic Name"
+              m = re.match(r'^(\d+(?:\.\d+)?)_(.*)', folder)
+              if m:
+                  section_num = m.group(1)
+                  section_label = m.group(2).replace("_", " ")
+                  heading = f"{section_num}. {section_label}"
+              else:
+                  heading = folder.replace("_", " ")
+                  section_num = ""
+
+              # --- TOC entry (uses the first JPEG as preview) -----------
+              first_jpeg = jpegs[0]
+              toc_line = (
+                  f"- [{heading}]({IMAGES_DIR}/{folder})"
+                  f" — [preview]({IMAGES_DIR}/{folder}/{first_jpeg})\n"
+              )
+              new_toc_entries += toc_line
+
+              # --- Full section body ------------------------------------
+              section_body = f"\n---\n\n## {heading}\n\n"
+              for jpeg in jpegs:
+                  # "Networking_and_Web_Fundamentals.jpeg" → "Networking and Web Fundamentals"
+                  topic = jpeg.replace(".jpeg", "").replace("_", " ")
+                  section_body += f"### {topic}\n\n"
+                  section_body += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
+
+              new_sections += section_body
+              print(f"  Queued section: {heading}  ({len(jpegs)} image(s))")
+
+          if not new_sections:
+              print("README already up-to-date — no new folders found.")
+          else:
+              # Append new sections at the end of the README
+              content = content.rstrip() + "\n" + new_sections
+
+              # If there are TOC additions, append them after the last TOC bullet
+              # (find the last "- [" line in the TOC block near the top)
+              if new_toc_entries:
+                  # Insert after the existing TOC block (before the first "---" separator)
+                  toc_end = content.find("\n---\n")
+                  if toc_end != -1:
+                      content = content[:toc_end] + "\n" + new_toc_entries.rstrip() + content[toc_end:]
+
+              with open(README, "w", encoding="utf-8") as fh:
+                  fh.write(content)
+              print("README updated successfully.")
+          PYEOF
+
+      - name: Commit and push changes
+        if: steps.convert.outputs.converted == 'true'
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          # Stage new JPEG images and updated README
+          git add images/ README.md
+          # Remove any PDF files still tracked by git (they were deleted on disk)
+          git ls-files --deleted | grep -i '\.pdf$' | xargs -r git rm --cached 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "Convert PDF upload(s) to JPEG images [automated]"
+            git push
+          fi
