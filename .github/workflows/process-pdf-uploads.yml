@@ -112,17 +112,31 @@ jobs:
                   | head -5)
 
                 # --- Attempt 2: tesseract OCR on the JPEG (fallback) ---
+                # Try multiple PSM modes to improve heading detection for handwritten notes:
+                #   PSM 3: Fully automatic page segmentation (good for structured layouts)
+                #   PSM 6: Assume uniform block of text (original approach)
+                #   PSM 4: Assume single column of text (good for notes)
                 if [ -z "$topic" ]; then
-                  topic_raw=$(tesseract "$f" stdout --psm 6 2>/dev/null \
-                    | sed '/^[[:space:]]*$/d' \
-                    | grep -m1 -E '.{5,}' \
-                    | grep -E '[a-zA-Z].*[a-zA-Z]' \
-                    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-                  topic=$(echo "$topic_raw" \
-                    | sed 's/[^a-zA-Z0-9 _]/ /g' \
-                    | tr -s ' ' '_' \
-                    | sed 's/^_*//;s/_*$//' \
-                    | cut -c1-80)
+                  for psm_mode in 3 6 4; do
+                    topic_raw=$(tesseract "$f" stdout --psm "$psm_mode" 2>/dev/null \
+                      | sed '/^[[:space:]]*$/d' \
+                      | head -15 \
+                      | grep -m1 -E '^[A-Za-z].*[A-Za-z]' \
+                      | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                    
+                    # Clean and validate the extracted topic
+                    topic=$(echo "$topic_raw" \
+                      | sed 's/[^a-zA-Z0-9 _]/ /g' \
+                      | tr -s ' ' '_' \
+                      | sed 's/^_*//;s/_*$//' \
+                      | cut -c1-80)
+                    
+                    # Accept if valid heading found
+                    if echo "$topic" | grep -qE '^[A-Za-z].*[A-Za-z]' && [ "${#topic}" -ge 5 ]; then
+                      break
+                    fi
+                    topic=""
+                  done
                 fi
 
                 if echo "$topic" | grep -qE '[a-zA-Z].*[a-zA-Z]' && [ "${#topic}" -ge 5 ]; then
@@ -157,21 +171,23 @@ jobs:
               """
               Run tesseract OCR on the image and return the first meaningful
               heading line, or None if nothing usable is found.
-              Tries PSM modes 6, 4, and 3 in order.
+              Tries PSM modes 3, 6, and 4 in order (3 first for better page structure detection).
+              Prioritizes lines starting with a letter (more likely to be headings).
               """
-              for psm in [6, 4, 3]:
+              for psm in [3, 6, 4]:
                   result = subprocess.run(
                       ["tesseract", img_path, "stdout", "--psm", str(psm)],
                       capture_output=True, text=True
                   )
-                  for line in result.stdout.splitlines():
+                  lines = result.stdout.splitlines()[:15]  # Check first 15 lines
+                  for line in lines:
                       line = line.strip()
-                      # Require at least 5 characters and two letters (guards against
-                      # OCR noise such as lone digits or punctuation).
-                      if len(line) >= 5 and re.search(r'[a-zA-Z].*[a-zA-Z]', line):
+                      # Require line starts with a letter (more likely a heading),
+                      # at least 5 characters, and contains two letters.
+                      if len(line) >= 5 and re.match(r'^[A-Za-z]', line) and re.search(r'[a-zA-Z].*[a-zA-Z]', line):
                           topic = re.sub(r'[^a-zA-Z0-9 _]', ' ', line)
                           topic = re.sub(r'\s+', '_', topic).strip('_')[:80]
-                          if re.search(r'[a-zA-Z].*[a-zA-Z]', topic):
+                          if re.match(r'^[A-Za-z]', topic) and re.search(r'[a-zA-Z].*[a-zA-Z]', topic):
                               return topic
               return None
 
