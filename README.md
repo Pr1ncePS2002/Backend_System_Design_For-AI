@@ -392,13 +392,20 @@ Scanned PDFs (e.g. from iPhone's **Scan Documents** feature) are processed autom
 **Examples:**
 
 ```
-6.1_Message_Queues.pdf              →  images/6.1_Message_Queues/6.1_Message_Queues.jpeg
-6.2_Event_Driven_Architecture.pdf   →  images/6.2_Event_Driven_Architecture/6.2_Event_Driven_Architecture_page_01.jpeg
-                                       images/6.2_Event_Driven_Architecture/6.2_Event_Driven_Architecture_page_02.jpeg
+# Single-page PDF
+6.1_Message_Queues.pdf              →  images/6.1_Message_Queues/01_6.1_Message_Queues.jpeg
+
+# Multi-page PDF — each page is named after its heading (extracted via OCR)
+6.2_Event_Driven_Architecture.pdf   →  images/6.2_Event_Driven_Architecture/01_Event_Driven_Architecture.jpeg
+                                       images/6.2_Event_Driven_Architecture/02_Kafka_Internals.jpeg
+                                       images/6.2_Event_Driven_Architecture/03_Dead_Letter_Queues.jpeg
                                        …
 ```
 
-**Multi-page PDFs** produce `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, … — one file per scanned page.
+**Multi-page PDFs**: the workflow reads the OCR text embedded by iPhone's Scan Documents and uses the first heading on each page as the image filename (e.g. `01_Event_Driven_Architecture.jpeg`). If no heading can be extracted, it falls back to `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, ….
 
-> **Tip:** Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
+> **Tips:**
+> - Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
+> - Spaces, dots, and other special characters in the PDF filename are automatically converted to underscores.
+> - For best topic-wise naming, ensure each page starts with a clearly written heading — iPhone's OCR will pick it up automatically.
 
