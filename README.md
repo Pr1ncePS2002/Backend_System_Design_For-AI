@@ -36,6 +36,7 @@ For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbo
 - [5.2. Monolith vs Microservices](images/5.2_Monolith_vs_Microservices) — [preview](images/5.2_Monolith_vs_Microservices/01_Monolith_vs_Microservices.jpeg)
 - [5.3. Scaling, Load Balancing, Capacity Estimation, Consistent Hashing](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing) — [preview](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing/01_Scaling.jpeg)
 
+- [5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs) — [preview](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/01_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_01.jpeg)
 ---
 
 ## 1.1. Networking and Web Fundamentals
@@ -364,3 +365,40 @@ Scanned PDFs (e.g. from iPhone's **Scan Documents** feature) are processed autom
 **Multi-page PDFs** produce `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, … — one file per scanned page.
 
 > **Tip:** Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
+
+---
+
+## 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 01
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 01](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/01_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_01.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 02
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 02](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/02_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_02.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 03
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 03](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/03_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_03.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 04
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 04](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/04_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_04.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 05
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 05](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/05_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_05.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 06
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 06](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/06_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_06.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 07
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 07](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/07_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_07.jpeg)
+
+### 5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 08
+
+[5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs page 08](images/5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs/08_5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs_page_08.jpeg)
+
