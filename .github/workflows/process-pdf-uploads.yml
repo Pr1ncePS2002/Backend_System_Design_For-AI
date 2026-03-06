@@ -1,10 +1,12 @@
 name: Process PDF Uploads
 
-# Trigger when any PDF file is pushed to the repository
+# Trigger when any PDF file is pushed to the repository,
+# OR manually (e.g. to repair fallback-named images in existing folders).
 on:
   push:
     paths:
       - '**.pdf'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,7 +25,7 @@ jobs:
       - name: Install PDF conversion tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq poppler-utils
+          sudo apt-get install -y -qq poppler-utils tesseract-ocr
 
       - name: Convert PDFs to JPEG images
         id: convert
@@ -58,11 +60,10 @@ jobs:
             # pdftoppm with -jpeg produces files named: {prefix}-{N}.jpg
             pdftoppm -jpeg -r 200 "$pdf" "${out_dir}/${pdf_name}"
 
-            # Rename .jpg → .jpeg and add numeric prefix for page-order sorting.
-            # nullglob ensures the array is empty when there are no matches.
-            shopt -s nullglob
-            page_files=("${out_dir}/${pdf_name}"-*.jpg)
-            shopt -u nullglob
+            # Collect output files sorted numerically (handles 10+ page PDFs correctly,
+            # where a plain glob would give lexicographic order: -1, -10, -2, …).
+            mapfile -t page_files < <(find "${out_dir}" -maxdepth 1 \
+              -name "${pdf_name}-*.jpg" | sort -V)
             page_count=${#page_files[@]}
 
             if [ "$page_count" -eq 0 ]; then
@@ -81,31 +82,50 @@ jobs:
               # Single page: 01_{pdf_name}.jpeg (or next available index)
               mv "${page_files[0]}" "${out_dir}/$(printf '%02d' "$next_index")_${pdf_name}.jpeg"
             else
-              # Multi-page: extract the heading from each page via pdftotext (iPhone
-              # Scan Documents PDFs embed OCR text) and use it as the filename so
-              # images are named by topic, matching the convention of older sections.
-              # Falls back to {pdf_name}_page_XX if no usable heading is found.
+              # Multi-page: extract the heading from each page and use it as the
+              # filename so images are named by topic, matching the convention of
+              # older sections.
+              #
+              # Strategy (in order):
+              #   1. pdftotext  – scans the first 5 non-blank lines of each page
+              #                   (iPhone Scan Documents PDFs embed OCR text).
+              #   2. tesseract  – runs directly on the converted JPEG as a fallback
+              #                   when pdftotext returns no usable text.
+              #   3. page-N     – last resort when neither method yields a heading.
               page_num=1
               for f in "${page_files[@]}"; do
-                # Extract the first non-blank line from this page as the topic heading
-                topic_raw=$(pdftotext -f "$page_num" -l "$page_num" "$pdf" - 2>/dev/null \
+
+                # --- Attempt 1: pdftotext (tries first 5 non-blank lines) ---
+                topic=""
+                while IFS= read -r line_raw; do
+                  candidate=$(echo "$line_raw" \
+                    | sed 's/[^a-zA-Z0-9 _]/ /g' \
+                    | tr -s ' ' '_' \
+                    | sed 's/^_*//;s/_*$//' \
+                    | cut -c1-80)
+                  if echo "$candidate" | grep -qE '[a-zA-Z].*[a-zA-Z]' && [ "${#candidate}" -ge 5 ]; then
+                    topic="$candidate"
+                    break
+                  fi
+                done < <(pdftotext -f "$page_num" -l "$page_num" "$pdf" - 2>/dev/null \
                   | sed '/^[[:space:]]*$/d' \
-                  | head -1 \
-                  | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                  | head -5)
 
-                # Sanitize: keep alphanumerics, spaces, and underscores only,
-                # collapse runs of underscores, strip leading/trailing underscores,
-                # and cap length at 80 characters.
-                topic=$(echo "$topic_raw" \
-                  | sed 's/[^a-zA-Z0-9 _]/ /g' \
-                  | tr -s ' ' '_' \
-                  | sed 's/^_*//;s/_*$//' \
-                  | cut -c1-80)
+                # --- Attempt 2: tesseract OCR on the JPEG (fallback) ---
+                if [ -z "$topic" ]; then
+                  topic_raw=$(tesseract "$f" stdout --psm 6 2>/dev/null \
+                    | sed '/^[[:space:]]*$/d' \
+                    | grep -m1 -E '.{5,}' \
+                    | grep -E '[a-zA-Z].*[a-zA-Z]' \
+                    | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                  topic=$(echo "$topic_raw" \
+                    | sed 's/[^a-zA-Z0-9 _]/ /g' \
+                    | tr -s ' ' '_' \
+                    | sed 's/^_*//;s/_*$//' \
+                    | cut -c1-80)
+                fi
 
-                # Accept the extracted topic only if it contains at least two letters
-                # anywhere in the string (guards against lone characters, numbers,
-                # or OCR noise).
-                if echo "$topic" | grep -qE '[a-zA-Z].*[a-zA-Z]'; then
+                if echo "$topic" | grep -qE '[a-zA-Z].*[a-zA-Z]' && [ "${#topic}" -ge 5 ]; then
                   target_name="$(printf '%02d' "$next_index")_${topic}.jpeg"
                 else
                   target_name="$(printf '%02d' "$next_index")_${pdf_name}_page_$(printf '%02d' "$page_num").jpeg"
@@ -125,8 +145,96 @@ jobs:
 
           echo "converted=true" >> "$GITHUB_OUTPUT"
 
+      - name: Repair fallback-named images with OCR
+        run: |
+          python3 << 'PYEOF'
+          import os, re, subprocess
+
+          IMAGES_DIR = "images"
+          README = "README.md"
+
+          def extract_topic_from_image(img_path):
+              """
+              Run tesseract OCR on the image and return the first meaningful
+              heading line, or None if nothing usable is found.
+              Tries PSM modes 6, 4, and 3 in order.
+              """
+              for psm in [6, 4, 3]:
+                  result = subprocess.run(
+                      ["tesseract", img_path, "stdout", "--psm", str(psm)],
+                      capture_output=True, text=True
+                  )
+                  for line in result.stdout.splitlines():
+                      line = line.strip()
+                      # Require at least 5 characters and two letters (guards against
+                      # OCR noise such as lone digits or punctuation).
+                      if len(line) >= 5 and re.search(r'[a-zA-Z].*[a-zA-Z]', line):
+                          topic = re.sub(r'[^a-zA-Z0-9 _]', ' ', line)
+                          topic = re.sub(r'\s+', '_', topic).strip('_')[:80]
+                          if re.search(r'[a-zA-Z].*[a-zA-Z]', topic):
+                              return topic
+              return None
+
+          # Match fallback-named files: NN_<anything>_page_NN.jpeg (including edge
+          # case where the base name is very short, e.g. NN_page_NN.jpeg)
+          fallback_pat = re.compile(r'^(\d{2})_.*_page_\d{2}\.jpeg$')
+
+          if not os.path.isfile(README):
+              print("README not found, skipping repair.")
+          else:
+              with open(README, "r", encoding="utf-8") as fh:
+                  content = fh.read()
+
+              all_renames = []
+
+              for folder in sorted(os.listdir(IMAGES_DIR)):
+                  folder_path = os.path.join(IMAGES_DIR, folder)
+                  if not os.path.isdir(folder_path):
+                      continue
+
+                  for filename in sorted(os.listdir(folder_path)):
+                      m = fallback_pat.match(filename)
+                      if not m:
+                          continue
+
+                      prefix = m.group(1)   # e.g. "01"
+                      img_path = os.path.join(folder_path, filename)
+
+                      print(f"  OCR scan: {folder}/{filename}")
+                      topic = extract_topic_from_image(img_path)
+
+                      if not topic:
+                          print(f"    No topic extracted — keeping original name")
+                          continue
+
+                      new_filename = f"{prefix}_{topic}.jpeg"
+                      if filename == new_filename:
+                          continue
+
+                      new_path = os.path.join(folder_path, new_filename)
+                      old_rel = f"images/{folder}/{filename}"
+                      new_rel = f"images/{folder}/{new_filename}"
+                      print(f"    Renaming → {new_filename}")
+                      all_renames.append((img_path, new_path, old_rel, new_rel))
+
+              for old_path, new_path, _, _ in all_renames:
+                  os.rename(old_path, new_path)
+
+              new_content = content
+              for _, _, old_rel, new_rel in all_renames:
+                  new_content = new_content.replace(old_rel, new_rel)
+
+              if new_content != content:
+                  with open(README, "w", encoding="utf-8") as fh:
+                      fh.write(new_content)
+                  print(f"README updated: {len(all_renames)} image(s) renamed.")
+              elif all_renames:
+                  print(f"{len(all_renames)} image(s) renamed (README unchanged).")
+              else:
+                  print("No fallback-named images found — nothing to repair.")
+          PYEOF
+
       - name: Re-number existing images by README order
-        if: steps.convert.outputs.converted == 'true'
         run: |
           python3 << 'PYEOF'
           import os, re
@@ -208,14 +316,11 @@ jobs:
 
           new_sections = ""
           new_toc_entries = ""
+          changed = False
 
           for folder in sorted(os.listdir(IMAGES_DIR)):
               folder_path = os.path.join(IMAGES_DIR, folder)
               if not os.path.isdir(folder_path):
-                  continue
-
-              # Skip folders already referenced in the README
-              if f"images/{folder}/" in content:
                   continue
 
               jpegs = sorted(f for f in os.listdir(folder_path) if f.endswith(".jpeg"))
@@ -233,48 +338,100 @@ jobs:
                   heading = folder.replace("_", " ")
                   section_num = ""
 
-              # --- TOC entry (uses the first JPEG as preview) -----------
-              first_jpeg = jpegs[0]
-              toc_line = (
-                  f"- [{heading}]({IMAGES_DIR}/{folder})"
-                  f" — [preview]({IMAGES_DIR}/{folder}/{first_jpeg})\n"
+              # Detect which images from this folder are already referenced as actual
+              # markdown links in the README: pattern `(images/folder/file.jpeg)`.
+              # This deliberately excludes bare paths in code-block examples, which
+              # are plain text without the surrounding parentheses of a markdown link.
+              already_in_readme = set(
+                  re.findall(
+                      rf'\(images/{re.escape(folder)}/([^/)]+\.jpeg)\)',
+                      content
+                  )
               )
-              new_toc_entries += toc_line
+              folder_in_readme = bool(already_in_readme)
 
-              # --- Full section body ------------------------------------
-              section_body = f"\n---\n\n## {heading}\n\n"
-              for jpeg in jpegs:
-                  # Strip the numeric prefix "01_" for the display heading
-                  # "01_Networking_and_Web_Fundamentals.jpeg" → "Networking and Web Fundamentals"
-                  display = re.sub(r'^\d{2}_', '', jpeg)
-                  topic = display.replace(".jpeg", "").replace("_", " ")
-                  section_body += f"### {topic}\n\n"
-                  section_body += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
+              if not folder_in_readme:
+                  # -------------------------------------------------------
+                  # Brand-new folder: add TOC entry + full section body
+                  # -------------------------------------------------------
+                  first_jpeg = jpegs[0]
+                  toc_line = (
+                      f"- [{heading}]({IMAGES_DIR}/{folder})"
+                      f" — [preview]({IMAGES_DIR}/{folder}/{first_jpeg})\n"
+                  )
+                  new_toc_entries += toc_line
 
-              new_sections += section_body
-              print(f"  Queued section: {heading}  ({len(jpegs)} image(s))")
+                  section_body = f"\n---\n\n## {heading}\n\n"
+                  for jpeg in jpegs:
+                      display = re.sub(r'^\d{2}_', '', jpeg)
+                      topic = display.replace(".jpeg", "").replace("_", " ")
+                      section_body += f"### {topic}\n\n"
+                      section_body += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
 
-          if not new_sections:
-              print("README already up-to-date — no new folders found.")
-          else:
+                  new_sections += section_body
+                  print(f"  New section queued: {heading}  ({len(jpegs)} image(s))")
+
+              else:
+                  # -------------------------------------------------------
+                  # Existing folder: find images on disk not yet in README
+                  # and append them to the existing section body.
+                  # -------------------------------------------------------
+                  new_jpegs = [j for j in jpegs if j not in already_in_readme]
+
+                  if not new_jpegs:
+                      continue  # Nothing new — skip
+
+                  print(f"  Appending {len(new_jpegs)} new image(s) to section: {heading}")
+
+                  # Build the extra lines to append inside the existing section.
+                  extra_lines = ""
+                  for jpeg in new_jpegs:
+                      display = re.sub(r'^\d{2}_', '', jpeg)
+                      topic = display.replace(".jpeg", "").replace("_", " ")
+                      extra_lines += f"### {topic}\n\n"
+                      extra_lines += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
+
+                  # Find the end of this section in the README (the next "---"
+                  # separator, or end-of-file) and insert before it.
+                  section_header = f"## {heading}"
+                  section_start = content.find(section_header)
+                  if section_start == -1:
+                      # Links were found but the section heading doesn't match
+                      # (can happen when the README heading was manually edited).
+                      # Fall back to appending at end; log a warning.
+                      print(f"  WARNING: could not locate section '{section_header}' in README — appending at end.")
+                      content = content.rstrip() + "\n\n" + extra_lines
+                  else:
+                      # Find the next "---" after this section heading
+                      next_sep = content.find("\n---\n", section_start)
+                      if next_sep == -1:
+                          # Last section — insert before end of file
+                          content = content.rstrip() + "\n\n" + extra_lines
+                      else:
+                          content = content[:next_sep] + "\n\n" + extra_lines.rstrip() + content[next_sep:]
+
+                  changed = True
+
+          if new_sections:
               # Append new sections at the end of the README
               content = content.rstrip() + "\n" + new_sections
+              changed = True
 
-              # If there are TOC additions, append them after the last TOC bullet
-              # (find the last "- [" line in the TOC block near the top)
+              # Insert new TOC entries before the first "---" separator
               if new_toc_entries:
-                  # Insert after the existing TOC block (before the first "---" separator)
                   toc_end = content.find("\n---\n")
                   if toc_end != -1:
                       content = content[:toc_end] + "\n" + new_toc_entries.rstrip() + content[toc_end:]
 
+          if changed:
               with open(README, "w", encoding="utf-8") as fh:
                   fh.write(content)
               print("README updated successfully.")
+          else:
+              print("README already up-to-date — no new images found.")
           PYEOF
 
       - name: Commit and push changes
-        if: steps.convert.outputs.converted == 'true'
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"

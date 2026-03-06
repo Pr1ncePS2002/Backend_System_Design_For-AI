@@ -402,7 +402,15 @@ Scanned PDFs (e.g. from iPhone's **Scan Documents** feature) are processed autom
                                        …
 ```
 
-**Multi-page PDFs**: the workflow reads the OCR text embedded by iPhone's Scan Documents and uses the first heading on each page as the image filename (e.g. `01_Event_Driven_Architecture.jpeg`). If no heading can be extracted, it falls back to `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, ….
+**Multi-page PDFs**: the workflow reads each page in upload order (not lexicographic order) and extracts the heading using a two-step strategy:
+1. **`pdftotext`** — reads the embedded OCR text from the PDF (iPhone's Scan Documents embeds this automatically). The first 5 non-blank lines are scanned to find a usable heading.
+2. **`tesseract`** — if `pdftotext` yields nothing usable, the workflow runs Tesseract OCR directly on the converted JPEG image as a fallback.
+
+If neither method extracts a heading, the page falls back to `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, ….
+
+### Repairing existing images
+
+If any folder already contains images with fallback names (ending in `_page_NN.jpeg`), you can repair them automatically by triggering the workflow manually from the GitHub Actions tab — no new PDF upload required.
 
 > **Tips:**
 > - Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
