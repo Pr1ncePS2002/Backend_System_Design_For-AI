@@ -40,7 +40,15 @@ jobs:
           echo "Found ${#pdfs[@]} PDF file(s): ${pdfs[*]}"
 
           for pdf in "${pdfs[@]}"; do
-            pdf_name=$(basename "$pdf" .pdf)
+            raw_name=$(basename "$pdf" .pdf)
+            # Sanitize: replace spaces, dots, commas and other non-safe chars with
+            # underscores so the folder/file names never contain whitespace.
+            # Dots between digits (e.g. "5.4") are preserved; trailing dots are not.
+            pdf_name=$(echo "$raw_name" \
+              | sed 's/[^a-zA-Z0-9._-]/_/g' \
+              | sed 's/\._/_/g' \
+              | sed 's/__*/_/g' \
+              | sed 's/^[_.]*//;s/[_.]*$//')
             out_dir="images/${pdf_name}"
 
             echo "Processing: $pdf  →  $out_dir/"
@@ -73,10 +81,37 @@ jobs:
               # Single page: 01_{pdf_name}.jpeg (or next available index)
               mv "${page_files[0]}" "${out_dir}/$(printf '%02d' "$next_index")_${pdf_name}.jpeg"
             else
-              # Multi-page: 01_{name}_page_01.jpeg, 02_{name}_page_02.jpeg, …
+              # Multi-page: extract the heading from each page via pdftotext (iPhone
+              # Scan Documents PDFs embed OCR text) and use it as the filename so
+              # images are named by topic, matching the convention of older sections.
+              # Falls back to {pdf_name}_page_XX if no usable heading is found.
               page_num=1
               for f in "${page_files[@]}"; do
-                mv "$f" "${out_dir}/$(printf '%02d' "$next_index")_${pdf_name}_page_$(printf '%02d' "$page_num").jpeg"
+                # Extract the first non-blank line from this page as the topic heading
+                topic_raw=$(pdftotext -f "$page_num" -l "$page_num" "$pdf" - 2>/dev/null \
+                  | sed '/^[[:space:]]*$/d' \
+                  | head -1 \
+                  | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+                # Sanitize: keep alphanumerics, spaces, and underscores only,
+                # collapse runs of underscores, strip leading/trailing underscores,
+                # and cap length at 80 characters.
+                topic=$(echo "$topic_raw" \
+                  | sed 's/[^a-zA-Z0-9 _]/ /g' \
+                  | tr -s ' ' '_' \
+                  | sed 's/^_*//;s/_*$//' \
+                  | cut -c1-80)
+
+                # Accept the extracted topic only if it contains at least two letters
+                # anywhere in the string (guards against lone characters, numbers,
+                # or OCR noise).
+                if echo "$topic" | grep -qE '[a-zA-Z].*[a-zA-Z]'; then
+                  target_name="$(printf '%02d' "$next_index")_${topic}.jpeg"
+                else
+                  target_name="$(printf '%02d' "$next_index")_${pdf_name}_page_$(printf '%02d' "$page_num").jpeg"
+                fi
+
+                mv "$f" "${out_dir}/${target_name}"
                 next_index=$((next_index + 1))
                 page_num=$((page_num + 1))
               done
