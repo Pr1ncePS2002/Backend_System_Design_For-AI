@@ -316,14 +316,11 @@ jobs:
 
           new_sections = ""
           new_toc_entries = ""
+          changed = False
 
           for folder in sorted(os.listdir(IMAGES_DIR)):
               folder_path = os.path.join(IMAGES_DIR, folder)
               if not os.path.isdir(folder_path):
-                  continue
-
-              # Skip folders already referenced in the README
-              if f"images/{folder}/" in content:
                   continue
 
               jpegs = sorted(f for f in os.listdir(folder_path) if f.endswith(".jpeg"))
@@ -341,44 +338,97 @@ jobs:
                   heading = folder.replace("_", " ")
                   section_num = ""
 
-              # --- TOC entry (uses the first JPEG as preview) -----------
-              first_jpeg = jpegs[0]
-              toc_line = (
-                  f"- [{heading}]({IMAGES_DIR}/{folder})"
-                  f" — [preview]({IMAGES_DIR}/{folder}/{first_jpeg})\n"
+              # Detect which images from this folder are already referenced as actual
+              # markdown links in the README: pattern `(images/folder/file.jpeg)`.
+              # This deliberately excludes bare paths in code-block examples, which
+              # are plain text without the surrounding parentheses of a markdown link.
+              already_in_readme = set(
+                  re.findall(
+                      rf'\(images/{re.escape(folder)}/([^/)]+\.jpeg)\)',
+                      content
+                  )
               )
-              new_toc_entries += toc_line
+              folder_in_readme = bool(already_in_readme)
 
-              # --- Full section body ------------------------------------
-              section_body = f"\n---\n\n## {heading}\n\n"
-              for jpeg in jpegs:
-                  # Strip the numeric prefix "01_" for the display heading
-                  # "01_Networking_and_Web_Fundamentals.jpeg" → "Networking and Web Fundamentals"
-                  display = re.sub(r'^\d{2}_', '', jpeg)
-                  topic = display.replace(".jpeg", "").replace("_", " ")
-                  section_body += f"### {topic}\n\n"
-                  section_body += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
+              if not folder_in_readme:
+                  # -------------------------------------------------------
+                  # Brand-new folder: add TOC entry + full section body
+                  # -------------------------------------------------------
+                  first_jpeg = jpegs[0]
+                  toc_line = (
+                      f"- [{heading}]({IMAGES_DIR}/{folder})"
+                      f" — [preview]({IMAGES_DIR}/{folder}/{first_jpeg})\n"
+                  )
+                  new_toc_entries += toc_line
 
-              new_sections += section_body
-              print(f"  Queued section: {heading}  ({len(jpegs)} image(s))")
+                  section_body = f"\n---\n\n## {heading}\n\n"
+                  for jpeg in jpegs:
+                      display = re.sub(r'^\d{2}_', '', jpeg)
+                      topic = display.replace(".jpeg", "").replace("_", " ")
+                      section_body += f"### {topic}\n\n"
+                      section_body += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
 
-          if not new_sections:
-              print("README already up-to-date — no new folders found.")
-          else:
+                  new_sections += section_body
+                  print(f"  New section queued: {heading}  ({len(jpegs)} image(s))")
+
+              else:
+                  # -------------------------------------------------------
+                  # Existing folder: find images on disk not yet in README
+                  # and append them to the existing section body.
+                  # -------------------------------------------------------
+                  new_jpegs = [j for j in jpegs if j not in already_in_readme]
+
+                  if not new_jpegs:
+                      continue  # Nothing new — skip
+
+                  print(f"  Appending {len(new_jpegs)} new image(s) to section: {heading}")
+
+                  # Build the extra lines to append inside the existing section.
+                  extra_lines = ""
+                  for jpeg in new_jpegs:
+                      display = re.sub(r'^\d{2}_', '', jpeg)
+                      topic = display.replace(".jpeg", "").replace("_", " ")
+                      extra_lines += f"### {topic}\n\n"
+                      extra_lines += f"[{topic}]({IMAGES_DIR}/{folder}/{jpeg})\n\n"
+
+                  # Find the end of this section in the README (the next "---"
+                  # separator, or end-of-file) and insert before it.
+                  section_header = f"## {heading}"
+                  section_start = content.find(section_header)
+                  if section_start == -1:
+                      # Links were found but the section heading doesn't match
+                      # (can happen when the README heading was manually edited).
+                      # Fall back to appending at end; log a warning.
+                      print(f"  WARNING: could not locate section '{section_header}' in README — appending at end.")
+                      content = content.rstrip() + "\n\n" + extra_lines
+                  else:
+                      # Find the next "---" after this section heading
+                      next_sep = content.find("\n---\n", section_start)
+                      if next_sep == -1:
+                          # Last section — insert before end of file
+                          content = content.rstrip() + "\n\n" + extra_lines
+                      else:
+                          content = content[:next_sep] + "\n\n" + extra_lines.rstrip() + content[next_sep:]
+
+                  changed = True
+
+          if new_sections:
               # Append new sections at the end of the README
               content = content.rstrip() + "\n" + new_sections
+              changed = True
 
-              # If there are TOC additions, append them after the last TOC bullet
-              # (find the last "- [" line in the TOC block near the top)
+              # Insert new TOC entries before the first "---" separator
               if new_toc_entries:
-                  # Insert after the existing TOC block (before the first "---" separator)
                   toc_end = content.find("\n---\n")
                   if toc_end != -1:
                       content = content[:toc_end] + "\n" + new_toc_entries.rstrip() + content[toc_end:]
 
+          if changed:
               with open(README, "w", encoding="utf-8") as fh:
                   fh.write(content)
               print("README updated successfully.")
+          else:
+              print("README already up-to-date — no new images found.")
           PYEOF
 
       - name: Commit and push changes
