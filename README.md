@@ -420,33 +420,26 @@ If any folder already contains images with fallback names (ending in `_page_NN.j
 
 ---
 
-## 5.5. Message Queues Kafka RabbitMQ Pub Sub model Event driven architecture DB as queues
+## 5.5. Message Queues, Kafka, RabbitMQ, Pub/Sub, Event-Driven Architecture, DB as Queues
 
-### Mes cage lay
+### Message Queues
+[Message Queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Message_Queues.jpeg)
 
-[Mes cage lay](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Mes_cage_lay.jpeg)
+### Kafka
+[Kafka](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/02_Kafka.jpeg)
 
-### Natix event sheanung ova
+### RabbitMQ
+[RabbitMQ](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/03_RabbitMQ.jpeg)
 
-[Natix event sheanung ova](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/02_Natix_event_sheanung_ova.jpeg)
+### Publish Subscribe Model
+[Publish Subscribe Model](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/04_Publish_Subscribe_Model.jpeg)
 
-### cK QueLiE 4
+### Event-Driven Architecture
+[Event-Driven Architecture](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/05_Event_Driven_Architecture.jpeg)
 
-[cK QueLiE 4](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/03_cK_QueLiE_4.jpeg)
+### Database as Queue
+[Database as Queue](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/06_Database_as_Queue.jpeg)
 
-### Publish Subseri be Modof
-
-[Publish Subseri be Modof](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/04_Publish_Subseri_be_Modof.jpeg)
-
-### Evert Diiwen Archi tecture
-
-[Evert Diiwen Archi tecture](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/05_Evert_Diiwen_Archi_tecture.jpeg)
-
-### eye 7
-
-[eye 7](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/06_eye_7.jpeg)
-
-### Ez workloads like LLM calls embedding generaon bat
-
-[Ez workloads like LLM calls embedding generaon bat](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/07_Ez_workloads_like_LLM_calls_embedding_generaon_bat.jpeg)
+### AI Task Queues
+[AI Task Queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/07_AI_Task_Queues.jpeg)
 
