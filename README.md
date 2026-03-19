@@ -37,7 +37,7 @@ For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbo
 - [5.3. Scaling, Load Balancing, Capacity Estimation, Consistent Hashing](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing) — [preview](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing/01_Scaling.jpeg)
 - [5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs) — [preview](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs/01_REST_API_Design.jpeg)
 
-- [5.5. Message Queues Kafka RabbitMQ Pub Sub model Event driven architecture DB as queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues) — [preview](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Mes_cage_lay.jpeg)
+- [5.5. Message Queues, Kafka, RabbitMQ , Pub Sub model, Event driven architecture, DB as queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues) — [preview](images/5.5_Message_QueuesKafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Mes_cage_lay.jpeg)
 ---
 
 ## 1.1. Networking and Web Fundamentals
