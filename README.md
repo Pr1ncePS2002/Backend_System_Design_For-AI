@@ -37,6 +37,7 @@ For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbo
 - [5.3. Scaling, Load Balancing, Capacity Estimation, Consistent Hashing](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing) — [preview](images/5.3_Scaling_Load_Balancing_Capacity_Estimation_Consistent_Hashing/01_Scaling.jpeg)
 - [5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs) — [preview](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs/01_REST_API_Design.jpeg)
 
+- [5.5. Message Queues Kafka RabbitMQ Pub Sub model Event driven architecture DB as queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues) — [preview](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Mes_cage_lay.jpeg)
 ---
 
 ## 1.1. Networking and Web Fundamentals
@@ -416,4 +417,36 @@ If any folder already contains images with fallback names (ending in `_page_NN.j
 > - Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
 > - Spaces, dots, and other special characters in the PDF filename are automatically converted to underscores.
 > - For best topic-wise naming, ensure each page starts with a clearly written heading — iPhone's OCR will pick it up automatically.
+
+---
+
+## 5.5. Message Queues Kafka RabbitMQ Pub Sub model Event driven architecture DB as queues
+
+### Mes cage lay
+
+[Mes cage lay](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Mes_cage_lay.jpeg)
+
+### Natix event sheanung ova
+
+[Natix event sheanung ova](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/02_Natix_event_sheanung_ova.jpeg)
+
+### cK QueLiE 4
+
+[cK QueLiE 4](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/03_cK_QueLiE_4.jpeg)
+
+### Publish Subseri be Modof
+
+[Publish Subseri be Modof](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/04_Publish_Subseri_be_Modof.jpeg)
+
+### Evert Diiwen Archi tecture
+
+[Evert Diiwen Archi tecture](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/05_Evert_Diiwen_Archi_tecture.jpeg)
+
+### eye 7
+
+[eye 7](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/06_eye_7.jpeg)
+
+### Ez workloads like LLM calls embedding generaon bat
+
+[Ez workloads like LLM calls embedding generaon bat](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/07_Ez_workloads_like_LLM_calls_embedding_generaon_bat.jpeg)
 
