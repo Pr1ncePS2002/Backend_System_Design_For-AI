@@ -378,47 +378,6 @@ For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbo
 
 [Streaming APIs for LLMs](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs/08_Streaming_APIs_for_LLMs.jpeg)
 
----
-
-## Adding New Notes
-
-Scanned PDFs (e.g. from iPhone's **Scan Documents** feature) are processed automatically. Follow the naming convention below and simply push the PDF — a GitHub Actions workflow will convert each page to a JPEG, update this README, and remove the PDF.
-
-### Naming convention
-
-| What you upload | Where the images land |
-|---|---|
-| `{N.M}_{Topic_Name}.pdf` | `images/{N.M}_{Topic_Name}/` |
-
-**Examples:**
-
-```
-# Single-page PDF
-6.1_Message_Queues.pdf              →  images/6.1_Message_Queues/01_6.1_Message_Queues.jpeg
-
-# Multi-page PDF — each page is named after its heading (extracted via OCR)
-6.2_Event_Driven_Architecture.pdf   →  images/6.2_Event_Driven_Architecture/01_Event_Driven_Architecture.jpeg
-                                       images/6.2_Event_Driven_Architecture/02_Kafka_Internals.jpeg
-                                       images/6.2_Event_Driven_Architecture/03_Dead_Letter_Queues.jpeg
-                                       …
-```
-
-**Multi-page PDFs**: the workflow reads each page in upload order (not lexicographic order) and extracts the heading using a two-step strategy:
-1. **`pdftotext`** — reads the embedded OCR text from the PDF (iPhone's Scan Documents embeds this automatically). The first 5 non-blank lines are scanned to find a usable heading.
-2. **`tesseract`** — if `pdftotext` yields nothing usable, the workflow runs Tesseract OCR directly on the converted JPEG image as a fallback.
-
-If neither method extracts a heading, the page falls back to `{name}_page_01.jpeg`, `{name}_page_02.jpeg`, ….
-
-### Repairing existing images
-
-If any folder already contains images with fallback names (ending in `_page_NN.jpeg`), you can repair them automatically by triggering the workflow manually from the GitHub Actions tab — no new PDF upload required.
-
-> **Tips:**
-> - Name the PDF exactly as you want the folder and README section to appear, using underscores instead of spaces (e.g. `6.1_Message_Queues_and_Kafka.pdf`).
-> - Spaces, dots, and other special characters in the PDF filename are automatically converted to underscores.
-> - For best topic-wise naming, ensure each page starts with a clearly written heading — iPhone's OCR will pick it up automatically.
-
----
 
 ## 5.5. Message Queues, Kafka, RabbitMQ, Pub/Sub, Event-Driven Architecture, DB as Queues
 
