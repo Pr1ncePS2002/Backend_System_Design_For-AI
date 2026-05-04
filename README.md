@@ -38,6 +38,8 @@ For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbo
 - [5.4. API Design, Patterns, GraphQL, gRPC, Streaming APIs for LLMs](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs) — [preview](images/5.4_API_Design_Patterns_GraphQL_gRPC_Streaming_APIs_for_LLMs/01_REST_API_Design.jpeg)
 
 - [5.5. Message Queues, Kafka, RabbitMQ , Pub Sub model, Event driven architecture, DB as queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues) — [preview](images/5.5_Message_QueuesKafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/01_Mes_cage_lay.jpeg)
+
+- [5.6. Eventual Consistency, AI System Reliability, Model Fallback Strategy](images/5.6_Eventual_Consistency_AI_System_Reliability_Model_Fallback_Strategy) — [preview](images/5.6_Eventual_Consistency_AI_System_Reliability_Model_Fallback_Strategy/01_Eventual_Consistency.jpeg)
 ---
 
 ## 1.1. Networking and Web Fundamentals
@@ -401,4 +403,17 @@ For downloading notes : https://drive.google.com/drive/folders/1HeiTfb70as7mTTbo
 
 ### AI Task Queues
 [AI Task Queues](images/5.5_Message_Queues_Kafka_RabbitMQ_Pub_Sub_model_Event_driven_architecture_DB_as_queues/07_AI_Task_Queues.jpeg)
+
+---
+
+## 5.6. Eventual Consistency, AI System Reliability, Model Fallback Strategy
+
+### Eventual Consistency
+[Eventual Consistency](images/5.6_Eventual_Consistency_AI_System_Reliability_Model_Fallback_Strategy/01_Eventual_Consistency.jpeg)
+
+### AI System Reliability
+[AI System Reliability](images/5.6_Eventual_Consistency_AI_System_Reliability_Model_Fallback_Strategy/02_AI_System_Reliability.jpeg)
+
+### Model Fallback Strategies
+[Model Fallback Strategies](images/5.6_Eventual_Consistency_AI_System_Reliability_Model_Fallback_Strategy/03_Model_Fallback_Strategies.jpeg)
 
